@@ -17,16 +17,40 @@ endif()
 if(CUDA_FOUND)
     message("INFO: Using CUDA version ${CUDA_VERSION}")
     add_definitions(-DHAVE_CUDA=1)
+    set(CUDA_NVCC_FLAGS
+        ${CUDA_NVCC_FLAGS}
+        -std=c++11
+        -O3
+        --ptxas-options=-v
+        -lineinfo
+
+        # SASS (готовые бинарные ядра):
+        -gencode arch=compute_61,code=sm_61     # Pascal (GTX 10xx)
+        -gencode arch=compute_70,code=sm_70     # Volta  (V100)
+        -gencode arch=compute_75,code=sm_75     # Turing (RTX 20xx / Quadro RTX 5000 / CMP 50HX)
+        -gencode arch=compute_86,code=sm_86     # Ampere (RTX 30xx / RTX A5000)
+        -gencode arch=compute_89,code=sm_89     # Ada    (RTX 40xx / RTX 5000 Ada)
+        # Blackwell (consumer/pro) = CC 12.0
+        -gencode arch=compute_120,code=sm_120
+        -gencode arch=compute_120,code=compute_120   # PTX для JIT вперёд
+
+        # (опционально) Blackwell datacenter = CC 10.0
+        # -gencode arch=compute_100,code=sm_100
+        # PTX для JIT вперёд:
+        -gencode arch=compute_75,code=compute_75
+
+        -Xptxas=-dlcm=ca
+        -Xptxas=-dscm=wt
+        -maxrregcount=64
+    )
+    # зафиксировать флаги в кэше, чтобы подкаталоги не перетёрли:
+    set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS}" CACHE STRING "nvcc flags" FORCE)
 else()
     message("INFO: Building without CUDA support")
     add_definitions(-DHAVE_CUDA=0)
 endif()
 
-if(CUDA_FOUND)
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};
-        -std=c++11;-O3;--ptxas-options=-v;-arch sm_30;-lineinfo
-    )
-endif()
+
 
 add_subdirectory(ext/argon2)
 
