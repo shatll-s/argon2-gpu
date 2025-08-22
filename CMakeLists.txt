@@ -31,8 +31,8 @@ if(CUDA_FOUND)
         -gencode arch=compute_86,code=sm_86     # Ampere (RTX 30xx / RTX A5000)
         -gencode arch=compute_89,code=sm_89     # Ada    (RTX 40xx / RTX 5000 Ada)
         # Blackwell (consumer/pro) = CC 12.0
-        -gencode arch=compute_120,code=sm_120
-        -gencode arch=compute_120,code=compute_120   # PTX для JIT вперёд
+        # -gencode arch=compute_120,code=sm_120
+        # -gencode arch=compute_120,code=compute_120   # PTX для JIT вперёд
 
         # (опционально) Blackwell datacenter = CC 10.0
         # -gencode arch=compute_100,code=sm_100
