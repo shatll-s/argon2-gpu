@@ -23,9 +23,27 @@ else()
 endif()
 
 if(CUDA_FOUND)
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};
-        -std=c++11;-O3;--ptxas-options=-v;-arch sm_30;-lineinfo
+    set(CUDA_NVCC_FLAGS
+        ${CUDA_NVCC_FLAGS}
+        -std=c++11
+        -O3
+        --ptxas-options=-v
+        -lineinfo
+
+        # SASS (готовые бинарные ядра):
+        -gencode arch=compute_75,code=sm_75     # Turing (RTX 20xx)
+        -gencode arch=compute_86,code=sm_86     # Ampere (RTX 30xx)
+        -gencode arch=compute_87,code=sm_87     # Ada fallback (RTX 40xx)
+
+        # PTX для JIT вперёд:
+        -gencode arch=compute_86,code=compute_86
+
+        -Xptxas=-dlcm=ca
+        -Xptxas=-dscm=wt
+        -maxrregcount=64
     )
+    # зафиксировать флаги в кэше, чтобы подкаталоги не перетёрли:
+    set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS}" CACHE STRING "nvcc flags" FORCE)
 endif()
 
 add_subdirectory(ext/argon2)

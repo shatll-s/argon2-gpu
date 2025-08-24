@@ -1,0 +1,45 @@
+# Build only CUDA components, skip OpenCL
+FROM ubuntu:20.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install CUDA and build tools
+RUN apt-get update && apt-get install -y \
+    cmake \
+    build-essential \
+    wget \
+    gnupg2 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add NVIDIA CUDA repository  
+RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb \
+    && dpkg -i cuda-keyring_1.0-1_all.deb \
+    && apt-get update \
+    && apt-get install -y cuda-toolkit-11-8 \
+    && rm -rf /var/lib/apt/lists/* cuda-keyring_1.0-1_all.deb
+
+ENV PATH=/usr/local/cuda/bin:$PATH
+ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+
+WORKDIR /build
+COPY . /build/
+
+# Clean previous build
+RUN rm -rf CMakeCache.txt CMakeFiles/ Makefile *.so argon2-gpu-*
+
+# Build only what we need - common and CUDA libraries
+RUN cmake . -DNO_CUDA=OFF -DCMAKE_BUILD_TYPE=Release && \
+    make argon2-gpu-common argon2-cuda -j$(nproc)
+
+# Create output
+RUN mkdir -p /output && \
+    cp libargon2-gpu-common.so libargon2-cuda.so /output/ && \
+    cp -r include /output/
+
+# Check what we built
+RUN echo "✅ Built libraries:" && ls -la /output/*.so && \
+    echo "🔍 CUDA library symbols:" && \
+    nm -D /output/libargon2-cuda.so | grep -i global | head -5 || echo "No symbols found"
+
+CMD ["cp", "-r", "/output/.", "/host/"]

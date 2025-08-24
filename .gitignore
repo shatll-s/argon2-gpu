@@ -29,7 +29,7 @@
 *.app
 
 # CMake
-CMakeFiles/
+trash/CMakeFiles/
 *.cmake
 CMakeCache.txt
 Makefile

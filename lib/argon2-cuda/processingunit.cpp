@@ -6,7 +6,22 @@
 #ifndef NDEBUG
 #include <iostream>
 #endif
+#include <cstdlib>
+#include <algorithm>
 
+static int env_int(const char* name, int defval) {
+    if (const char* v = std::getenv(name)) {
+        char* end=nullptr;
+        long x = std::strtol(v, &end, 10);
+        if (end && *end=='\0') return (int)x;
+    }
+    return defval;
+}
+
+static bool env_on(const char* name, bool defval) {
+    if (const char* v = std::getenv(name)) return std::atoi(v) != 0;
+    return defval;
+}
 namespace argon2 {
 namespace cuda {
 
@@ -144,8 +159,44 @@ void ProcessingUnit::getHash(std::size_t index, void *hash)
 void ProcessingUnit::beginProcessing()
 {
     setCudaDevice(device->getDeviceIndex());
-    runner.run(bestLanesPerBlock, bestJobsPerBlock);
+
+    // --- ENV override для геометрии блоков/джобов ---
+    int  lpbEnv = env_int("A2_LPB",  -1);   // lanesPerBlock
+    int  jpbEnv = env_int("A2_JPB",  -1);   // jobsPerBlock
+    bool force  = env_on("A2_FORCE", false);
+
+    const int minLPB = (int)runner.getMinLanesPerBlock();
+    const int maxLPB = (int)runner.getMaxLanesPerBlock();
+    const int minJPB = (int)runner.getMinJobsPerBlock();
+    const int maxJPB = (int)runner.getMaxJobsPerBlock();
+
+    std::uint32_t useLPB = bestLanesPerBlock;
+    std::uint32_t useJPB = bestJobsPerBlock;
+
+    if (force) {                 // при FORCE — по умолчанию берём максимумы
+        if (lpbEnv < 0) lpbEnv = maxLPB;
+        if (jpbEnv < 0) jpbEnv = maxJPB;
+    }
+    if (lpbEnv > 0) {
+        lpbEnv = std::max(minLPB, std::min(maxLPB, lpbEnv));
+        useLPB = (std::uint32_t)lpbEnv;
+    }
+    if (jpbEnv > 0) {
+        jpbEnv = std::max(minJPB, std::min(maxJPB, jpbEnv));
+        useJPB = (std::uint32_t)jpbEnv;
+    }
+
+#ifndef NDEBUG
+    if (env_on("A2_DEBUG", false)) {
+        std::cerr << "[A2] LPB=" << useLPB << " JPB=" << useJPB
+                  << " (bounds L[" << minLPB << ".." << maxLPB
+                  << "] J[" << minJPB << ".." << maxJPB << "])\n";
+    }
+#endif
+    // --- запуск с выбранными параметрами ---
+    runner.run(useLPB, useJPB);
 }
+
 
 void ProcessingUnit::endProcessing()
 {
