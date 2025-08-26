@@ -43,9 +43,10 @@ RUN git submodule update --init --recursive
 # Clean previous build
 RUN rm -rf CMakeCache.txt CMakeFiles/ Makefile *.so argon2-gpu-* build/
 
-# Configure with fresh CUDA
+# Configure with fresh CUDA and force HAVE_CUDA=1
 RUN cmake . -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda \
     -DNO_CUDA=OFF \
+    -DHAVE_CUDA=ON \
     -DCMAKE_BUILD_TYPE=Release
 
 # Build all components including dependencies
