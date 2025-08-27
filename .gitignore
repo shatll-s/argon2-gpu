@@ -39,3 +39,7 @@ Makefile
 
 .idea/
 ext/
+
+# build
+build/
+docker-build/
